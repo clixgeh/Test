@@ -1,0 +1,108 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blackbox AI – Real-time Location Tracker</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  ></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Courier New', Courier, monospace;
+    }
+    .glow {
+      text-shadow: 0 0 5px #0ff, 0 0 10px #0ff;
+    }
+  </style>
+</head>
+<body class="bg-black text-green-400 p-4">
+  <div class="max-w-4xl mx-auto space-y-4">
+    <h1 class="text-3xl font-bold text-center glow">Blackbox AI – Real-time Location Tracker</h1>
+    <div id="map" class="h-80 rounded-lg border-2 border-green-400"></div>
+    <div class="grid md:grid-cols-2 gap-4 mt-4">
+      <div class="space-y-2">
+        <div id="status" class="text-sm">Status: <span class="font-bold">Menunggu izin lokasi...</span></div>
+        <div id="coords" class="text-sm">Lokasi: -</div>
+        <div id="accuracy" class="text-sm">Akurasi: -</div>
+        <div id="timestamp" class="text-sm">Waktu: -</div>
+        <button onclick="toggleTracking()" id="trackBtn" class="mt-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow">Aktifkan Tracking AI</button>
+      </div>
+      <div class="bg-gray-900 text-green-300 p-2 rounded overflow-y-auto h-40 border border-green-600">
+        <div class="text-sm font-bold mb-1">Log Aktivitas</div>
+        <div id="log" class="text-xs space-y-1"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let map, marker, tracking = false;
+    let watchId;
+
+    function initMap(lat, lng) {
+      if (!map) {
+        map = L.map("map").setView([lat, lng], 15);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: '© OpenStreetMap',
+        }).addTo(map);
+      }
+      if (marker) {
+        marker.setLatLng([lat, lng]);
+      } else {
+        marker = L.marker([lat, lng]).addTo(map);
+      }
+    }
+
+    function updateInfo(position) {
+      const lat = position.coords.latitude.toFixed(5);
+      const lng = position.coords.longitude.toFixed(5);
+      const accuracy = position.coords.accuracy.toFixed(2);
+      const timestamp = new Date(position.timestamp).toLocaleTimeString();
+
+      initMap(lat, lng);
+
+      document.getElementById("status").innerHTML = "Status: <span class='font-bold text-green-400'>Tracking aktif</span>";
+      document.getElementById("coords").textContent = `Lokasi: ${lat}, ${lng}`;
+      document.getElementById("accuracy").textContent = `Akurasi: ${accuracy} meter`;
+      document.getElementById("timestamp").textContent = `Waktu: ${timestamp}`;
+
+      const logEntry = `[${timestamp}] Lokasi: ${lat}, ${lng}, Akurasi: ${accuracy}m`;
+      const log = document.getElementById("log");
+      const entry = document.createElement("div");
+      entry.textContent = logEntry;
+      log.prepend(entry);
+    }
+
+    function toggleTracking() {
+      const button = document.getElementById("trackBtn");
+      if (tracking) {
+        navigator.geolocation.clearWatch(watchId);
+        tracking = false;
+        button.textContent = "Aktifkan Tracking AI";
+        document.getElementById("status").innerHTML = "Status: <span class='text-yellow-400'>Tracking dihentikan</span>";
+      } else {
+        if ("geolocation" in navigator) {
+          tracking = true;
+          button.textContent = "Hentikan Tracking";
+          document.getElementById("status").innerHTML = "Status: <span class='text-blue-400'>Mengaktifkan...</span>";
+          watchId = navigator.geolocation.watchPosition(
+            updateInfo,
+            (err) => {
+              document.getElementById("status").innerHTML = "Status: <span class='text-red-500'>Gagal: " + err.message + "</span>";
+            },
+            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+          );
+        } else {
+          document.getElementById("status").textContent = "Geolocation tidak didukung di browser ini.";
+        }
+      }
+    }
+  </script>
+</body>
+</html>
